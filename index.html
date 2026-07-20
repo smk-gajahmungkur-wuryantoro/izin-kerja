@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Kirim Izin & Simpan Drive</title>
+  <title>Kirim Izin, Spreadsheet & Drive</title>
   <style>
     body { font-family: sans-serif; max-width: 500px; margin: 20px auto; padding: 20px; }
     label { display: block; margin-top: 10px; font-weight: bold; }
@@ -15,7 +15,7 @@
   </style>
 </head>
 <body>
-  <h2>Formulir Permohonan Izin (Simpan PDF ke Drive)</h2>
+  <h2>Formulir Permohonan Izin</h2>
   
   <label for="nama">Nama:</label>
   <input type="text" id="nama" value="Bp Sakiman, S.Pd.">
@@ -32,18 +32,16 @@
   <label for="ttd">Ttd (Nama Guru/Karyawan):</label>
   <input type="text" id="ttd" placeholder="Masukkan nama Anda">
 
-  <label for="apiUrl">Google Apps Script Web App URL:</label>
-  <input type="text" id="apiUrl" placeholder="Paste Web App URL dari Langkah 1 disini">
-
   <label>Preview Pesan:</label>
   <div class="preview" id="previewText"></div>
 
-  <button id="btnKirim" onclick="prosesIzin()">Generate PDF & Kirim WA</button>
+  <button id="btnKirim" onclick="prosesIzin()">Simpan & Kirim WA</button>
   <div class="status" id="statusMessage"></div>
 
   <script>
     const fields = ['nama', 'hari_tgl', 'waktu', 'ket', 'ttd'];
     const targetPhone = '6282322575527';
+    const apiUrl = 'https://script.google.com/macros/s/AKfycbxRutqld0iFXEFQ1UJiZhrXEEa_VY5hl9vLIT3W4GR1rzpajEZEPbuqN172VdEmZ0Q83A/exec';
 
     function updatePreview() {
       const nama = document.getElementById('nama').value || '...';
@@ -74,16 +72,9 @@ ${ttd}`;
     });
 
     async function prosesIzin() {
-      const apiUrl = document.getElementById('apiUrl').value.trim();
       const btn = document.getElementById('btnKirim');
       const statusDiv = document.getElementById('statusMessage');
 
-      if (!apiUrl) {
-        alert('Harap isi Google Apps Script Web App URL terlebih dahulu!');
-        return;
-      }
-
-      // Ambil data form
       const payload = {
         nama: document.getElementById('nama').value,
         hari_tgl: document.getElementById('hari_tgl').value,
@@ -93,22 +84,21 @@ ${ttd}`;
       };
 
       btn.disabled = true;
-      statusDiv.innerText = "Sedang membuat PDF & mengunggah ke Drive...";
+      statusDiv.style.color = "blue";
+      statusDiv.innerText = "Sedang menyimpan ke Spreadsheet & membuat PDF...";
 
       try {
-        // Kirim data ke Google Apps Script
-        const response = await fetch(apiUrl, {
+        await fetch(apiUrl, {
           method: 'POST',
-          mode: 'no-cors', // Diperlukan karena batasan CORS redirect dari Apps Script
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
         });
 
-        // Karena mode 'no-cors', kita tidak bisa membaca response JSON secara langsung, 
-        // tapi data tetap berhasil terkirim dan diproses di server Google.
-        statusDiv.innerText = "PDF Berhasil disimpan! Membuka WhatsApp...";
+        statusDiv.style.color = "green";
+        statusDiv.innerText = "Berhasil! Membuka WhatsApp...";
         
         setTimeout(() => {
           const text = updatePreview();
@@ -120,7 +110,8 @@ ${ttd}`;
 
       } catch (error) {
         console.error(error);
-        statusDiv.innerText = "Gagal mengunggah file. Silakan periksa URL API Anda.";
+        statusDiv.style.color = "red";
+        statusDiv.innerText = "Gagal memproses data. Hubungi admin.";
         btn.disabled = false;
       }
     }
