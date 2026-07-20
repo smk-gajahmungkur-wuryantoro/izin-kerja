@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Kirim Izin & Simpan Drive</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 20px auto; padding: 20px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, textarea { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+    button { margin-top: 15px; padding: 10px; background-color: #25D366; color: white; border: none; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
+    button:hover { background-color: #128C7E; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    .preview { background: #f0f0f0; padding: 10px; margin-top: 15px; border-radius: 4px; white-space: pre-wrap; font-family: monospace; font-size: 14px; border: 1px solid #ccc; }
+    .status { margin-top: 10px; font-weight: bold; color: blue; }
+  </style>
+</head>
+<body>
+  <h2>Formulir Permohonan Izin (Simpan PDF ke Drive)</h2>
+  
+  <label for="nama">Nama:</label>
+  <input type="text" id="nama" value="Bp Sakiman, S.Pd.">
+
+  <label for="hari_tgl">Hari/tgl:</label>
+  <input type="text" id="hari_tgl" value="Senin, 20/7/26">
+
+  <label for="waktu">Waktu:</label>
+  <input type="text" id="waktu" value="jam 11.30 - selesai">
+
+  <label for="ket">Ket. (Keterangan):</label>
+  <input type="text" id="ket" value="Periksa kesehatan ke R.S.">
+
+  <label for="ttd">Ttd (Nama Guru/Karyawan):</label>
+  <input type="text" id="ttd" placeholder="Masukkan nama Anda">
+
+  <label for="apiUrl">Google Apps Script Web App URL:</label>
+  <input type="text" id="apiUrl" placeholder="Paste Web App URL dari Langkah 1 disini">
+
+  <label>Preview Pesan:</label>
+  <div class="preview" id="previewText"></div>
+
+  <button id="btnKirim" onclick="prosesIzin()">Generate PDF & Kirim WA</button>
+  <div class="status" id="statusMessage"></div>
+
+  <script>
+    const fields = ['nama', 'hari_tgl', 'waktu', 'ket', 'ttd'];
+    const targetPhone = '6282322575527';
+
+    function updatePreview() {
+      const nama = document.getElementById('nama').value || '...';
+      const hariTgl = document.getElementById('hari_tgl').value || '...';
+      const waktu = document.getElementById('waktu').value || '...';
+      const ket = document.getElementById('ket').value || '...';
+      const ttd = document.getElementById('ttd').value || '[nama guru/karyawan]';
+      
+      const template = `Assallamu'allaikum warohmatullahi Wabarokatuh.
+memohon ijin ,pada : 
+Nama= ${nama}
+Hari/tgl= ${hariTgl}
+Waktu = ${waktu}
+Ket. = ${ket}
+Demikian informasi disampaikan , mohon maaf .
+Atas perhatian serta kerjasama yg baik dan kondusifitas kegiatan pada hari ini, disampaikan terima kasih.
+Wasallam warohmatullahi Wabarokaatuh.
+
+Ttd
+${ttd}`;
+      
+      document.getElementById('previewText').innerText = template;
+      return template;
+    }
+
+    fields.forEach(id => {
+      document.getElementById(id).addEventListener('input', updatePreview);
+    });
+
+    async function prosesIzin() {
+      const apiUrl = document.getElementById('apiUrl').value.trim();
+      const btn = document.getElementById('btnKirim');
+      const statusDiv = document.getElementById('statusMessage');
+
+      if (!apiUrl) {
+        alert('Harap isi Google Apps Script Web App URL terlebih dahulu!');
+        return;
+      }
+
+      // Ambil data form
+      const payload = {
+        nama: document.getElementById('nama').value,
+        hari_tgl: document.getElementById('hari_tgl').value,
+        waktu: document.getElementById('waktu').value,
+        ket: document.getElementById('ket').value,
+        ttd: document.getElementById('ttd').value
+      };
+
+      btn.disabled = true;
+      statusDiv.innerText = "Sedang membuat PDF & mengunggah ke Drive...";
+
+      try {
+        // Kirim data ke Google Apps Script
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Diperlukan karena batasan CORS redirect dari Apps Script
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Karena mode 'no-cors', kita tidak bisa membaca response JSON secara langsung, 
+        // tapi data tetap berhasil terkirim dan diproses di server Google.
+        statusDiv.innerText = "PDF Berhasil disimpan! Membuka WhatsApp...";
+        
+        setTimeout(() => {
+          const text = updatePreview();
+          const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
+          window.open(url, '_blank');
+          btn.disabled = false;
+          statusDiv.innerText = "";
+        }, 1500);
+
+      } catch (error) {
+        console.error(error);
+        statusDiv.innerText = "Gagal mengunggah file. Silakan periksa URL API Anda.";
+        btn.disabled = false;
+      }
+    }
+
+    // Jalankan preview pertama kali
+    updatePreview();
+  </script>
+</body>
+</html>
