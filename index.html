@@ -65,7 +65,7 @@
       color: #4b5563;
       margin-bottom: 6px;
     }
-    input {
+    input, select {
       width: 100%;
       height: 46px;
       padding: 0 16px;
@@ -76,8 +76,18 @@
       background-color: #f9fafb;
       transition: all 0.2s ease;
       outline: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
     }
-    input:focus {
+    select {
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      background-size: 16px;
+      padding-right: 40px;
+    }
+    input:focus, select:focus {
       border-color: #25D366;
       background-color: #fff;
       box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
@@ -140,12 +150,14 @@
     
     <div class="form-group">
       <label for="nama">Nama</label>
-      <input type="text" id="nama" placeholder="Nama & gelar.">
+      <select id="nama">
+        <option value="" disabled selected>Memuat nama guru...</option>
+      </select>
     </div>
 
     <div class="form-group">
       <label for="hari_tgl">Hari/Tanggal</label>
-      <input type="text" id="hari_tgl" placeholder="Contoh: Senin, 20/7/26">
+      <input type="date" id="hari_tgl">
     </div>
 
     <div class="form-group">
@@ -172,9 +184,48 @@
     const targetPhone = '6282322575527';
     const apiUrl = 'https://script.google.com/macros/s/AKfycbxRutqld0iFXEFQ1UJiZhrXEEa_VY5hl9vLIT3W4GR1rzpajEZEPbuqN172VdEmZ0Q83A/exec';
 
+    // Ambil daftar nama guru dari Google Sheets secara dinamis
+    async function loadDaftarNama() {
+      const selectNama = document.getElementById('nama');
+      try {
+        const response = await fetch(apiUrl);
+        const listNama = await response.json();
+        
+        selectNama.innerHTML = '<option value="" disabled selected>Pilih Nama & Gelar</option>';
+        if (Array.isArray(listNama) && listNama.length > 0) {
+          listNama.forEach(nama => {
+            const opt = document.createElement('option');
+            opt.value = nama;
+            opt.textContent = nama;
+            selectNama.appendChild(opt);
+          });
+        } else {
+          selectNama.innerHTML = '<option value="" disabled selected>Gagal memuat nama (Data Kosong)</option>';
+        }
+      } catch (error) {
+        console.error("Error loading names:", error);
+        selectNama.innerHTML = '<option value="" disabled selected>Gagal memuat daftar nama</option>';
+      }
+    }
+
+    // Helper untuk mengubah format date picker YYYY-MM-DD menjadi "Hari, DD/MM/YY"
+    function formatIndonesianDate(dateString) {
+      if (!dateString) return '(Hari/Tanggal)';
+      const date = new Date(dateString);
+      const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+      const dayName = days[date.getDay()];
+      
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yy = String(date.getFullYear()).substring(2);
+      
+      return `${dayName}, ${dd}/${mm}/${yy}`;
+    }
+
     function updatePreview() {
       const nama = document.getElementById('nama').value || '(Nama)';
-      const hariTgl = document.getElementById('hari_tgl').value || '(Hari/Tanggal)';
+      const rawDate = document.getElementById('hari_tgl').value;
+      const hariTgl = formatIndonesianDate(rawDate);
       const waktu = document.getElementById('waktu').value || '(Waktu)';
       const ket = document.getElementById('ket').value || '(Keterangan)';
       
@@ -203,10 +254,22 @@ ${nama}`;
       const btn = document.getElementById('btnKirim');
       const statusDiv = document.getElementById('statusMessage');
       const namaValue = document.getElementById('nama').value;
+      const rawDate = document.getElementById('hari_tgl').value;
+
+      if (!namaValue) {
+        alert('Silakan pilih Nama terlebih dahulu!');
+        return;
+      }
+      if (!rawDate) {
+        alert('Silakan pilih Tanggal terlebih dahulu!');
+        return;
+      }
+
+      const formattedDate = formatIndonesianDate(rawDate);
 
       const payload = {
         nama: namaValue,
-        hari_tgl: document.getElementById('hari_tgl').value,
+        hari_tgl: formattedDate,
         waktu: document.getElementById('waktu').value,
         ket: document.getElementById('ket').value,
         ttd: namaValue
@@ -246,8 +309,11 @@ ${nama}`;
       }
     }
 
-    // Jalankan preview pertama kali
-    updatePreview();
+    // Panggil daftar nama saat halaman selesai loading
+    window.onload = () => {
+      loadDaftarNama();
+      updatePreview();
+    };
   </script>
 </body>
 </html>
