@@ -23,7 +23,7 @@
     .card {
       background: #ffffff;
       width: 100%;
-      max-width: 450px;
+      max-width: 480px;
       border-radius: 16px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       padding: 24px;
@@ -65,10 +65,13 @@
       color: #4b5563;
       margin-bottom: 6px;
     }
-    input, select {
+    .required-star {
+      color: #dc2626;
+      margin-left: 2px;
+    }
+    input, select, textarea {
       width: 100%;
-      height: 46px;
-      padding: 0 16px;
+      padding: 12px 16px;
       border: 1px solid #d1d5db;
       border-radius: 10px;
       font-size: 14px;
@@ -76,18 +79,25 @@
       background-color: #f9fafb;
       transition: all 0.2s ease;
       outline: none;
+    }
+    input[type="text"], input[type="date"], select {
+      height: 46px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    select {
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
-    }
-    select {
       background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 16px center;
       background-size: 16px;
       padding-right: 40px;
     }
-    input:focus, select:focus {
+    input:focus, select:focus, textarea:focus {
       border-color: #25D366;
       background-color: #fff;
       box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
@@ -98,10 +108,11 @@
       border-radius: 10px;
       padding: 12px 16px;
       font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
-      font-size: 13px;
+      font-size: 12px;
       color: #4b5563;
       white-space: pre-wrap;
       line-height: 1.5;
+      text-align: left;
     }
     .btn-kirim {
       display: flex;
@@ -141,6 +152,14 @@
     .status-msg.loading { color: #2563eb; }
     .status-msg.success { color: #16a34a; }
     .status-msg.error { color: #dc2626; }
+    .file-input-wrapper {
+      position: relative;
+      margin-top: 4px;
+    }
+    input[type="file"] {
+      padding: 8px 12px;
+      background: #fff;
+    }
   </style>
 </head>
 <body>
@@ -149,54 +168,67 @@
     <h2>Permohonan Izin Kerja</h2>
     
     <div class="form-group">
-      <label for="nama">Nama</label>
-      <select id="nama">
+      <label for="nama">Nama<span class="required-star">*</span></label>
+      <select id="nama" onchange="onNamaChange()">
         <option value="" disabled selected>Memuat nama guru...</option>
       </select>
     </div>
 
     <div class="form-group">
-      <label for="hari_tgl">Hari/Tanggal</label>
-      <input type="date" id="hari_tgl">
+      <label for="hari_tgl">Hari/Tanggal<span class="required-star">*</span></label>
+      <input type="date" id="hari_tgl" onchange="validateForm()">
     </div>
 
     <div class="form-group">
-      <label for="waktu">Waktu</label>
-      <input type="text" id="waktu" placeholder="Contoh: jam 11.30 - selesai atau 08.00 - 10.00">
+      <label for="jenis_izin">Jenis Izin<span class="required-star">*</span></label>
+      <select id="jenis_izin" onchange="validateForm()">
+        <option value="tidak masuk kerja">Izin Tidak Masuk Kerja</option>
+        <option value="datang terlambat">Izin Datang Terlambat</option>
+        <option value="pulang lebih awal">Izin Pulang Lebih Awal</option>
+      </select>
     </div>
 
     <div class="form-group">
-      <label for="ket">Keterangan</label>
-      <input type="text" id="ket" placeholder="Contoh: Periksa kesehatan ke R.S. / Keperluan keluarga">
+      <label for="ket">Alasan / Detail Izin<span class="required-star">*</span></label>
+      <textarea id="ket" placeholder="Tuliskan alasan izin Anda secara jelas..." oninput="validateForm()"></textarea>
     </div>
 
     <div class="form-group">
-      <label>Preview Pesan WhatsApp</label>
+      <label for="bukti_foto">Upload Bukti Foto / Dokumen<span class="required-star">*</span></label>
+      <div class="file-input-wrapper">
+        <input type="file" id="bukti_foto" accept="image/*,application/pdf" onchange="validateForm()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Preview Surat Izin</label>
       <div id="previewText" class="preview-box"></div>
     </div>
 
-    <button id="btnKirim" class="btn-kirim" onclick="prosesIzin()">Simpan & Kirim ke WhatsApp</button>
+    <button id="btnKirim" class="btn-kirim" onclick="prosesIzin()" disabled>Simpan & Kirim ke WhatsApp</button>
     <div id="statusMessage" class="status-msg"></div>
   </div>
 
   <script>
-    const fields = ['nama', 'hari_tgl', 'waktu', 'ket'];
+    const fields = ['nama', 'hari_tgl', 'jenis_izin', 'ket'];
     const targetPhone = '6282322575527';
     const apiUrl = 'https://script.google.com/macros/s/AKfycbxRutqld0iFXEFQ1UJiZhrXEEa_VY5hl9vLIT3W4GR1rzpajEZEPbuqN172VdEmZ0Q83A/exec';
+    
+    let dbGuru = [];
+    let selectedKedudukan = 'Guru';
 
-    // Ambil daftar nama guru dari Google Sheets secara dinamis
     async function loadDaftarNama() {
       const selectNama = document.getElementById('nama');
       try {
         const response = await fetch(apiUrl);
-        const listNama = await response.json();
+        dbGuru = await response.json();
         
         selectNama.innerHTML = '<option value="" disabled selected>Pilih Nama & Gelar</option>';
-        if (Array.isArray(listNama) && listNama.length > 0) {
-          listNama.forEach(nama => {
+        if (Array.isArray(dbGuru) && dbGuru.length > 0) {
+          dbGuru.forEach(guru => {
             const opt = document.createElement('option');
-            opt.value = nama;
-            opt.textContent = nama;
+            opt.value = guru.nama;
+            opt.textContent = guru.nama;
             selectNama.appendChild(opt);
           });
         } else {
@@ -206,11 +238,33 @@
         console.error("Error loading names:", error);
         selectNama.innerHTML = '<option value="" disabled selected>Gagal memuat daftar nama</option>';
       }
+      validateForm();
     }
 
-    // Helper untuk mengubah format date picker YYYY-MM-DD menjadi "Hari, DD/MM/YY"
+    function onNamaChange() {
+      const selectNama = document.getElementById('nama');
+      const selectedNama = selectNama.value;
+      const found = dbGuru.find(g => g.nama === selectedNama);
+      if (found) {
+        selectedKedudukan = found.kedudukan;
+      }
+      updatePreview();
+      validateForm();
+    }
+
+    function validateForm() {
+      const namaValue = document.getElementById('nama').value;
+      const rawDate = document.getElementById('hari_tgl').value;
+      const alasanValue = document.getElementById('ket').value.trim();
+      const fileInput = document.getElementById('bukti_foto');
+      const btn = document.getElementById('btnKirim');
+
+      const isComplete = namaValue && rawDate && alasanValue && fileInput.files.length > 0;
+      btn.disabled = !isComplete;
+    }
+
     function formatIndonesianDate(dateString) {
-      if (!dateString) return '(Hari/Tanggal)';
+      if (!dateString) return '……………………………………………';
       const date = new Date(dateString);
       const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
       const dayName = days[date.getDay()];
@@ -222,24 +276,47 @@
       return `${dayName}, ${dd}/${mm}/${yy}`;
     }
 
+    function getIndonesianMonthYear(dateString) {
+      if (!dateString) return '…………………… 2025';
+      const date = new Date(dateString);
+      const months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    }
+
     function updatePreview() {
-      const nama = document.getElementById('nama').value || '(Nama)';
+      const nama = document.getElementById('nama').value || '…………………………….';
       const rawDate = document.getElementById('hari_tgl').value;
       const hariTgl = formatIndonesianDate(rawDate);
-      const waktu = document.getElementById('waktu').value || '(Waktu)';
-      const ket = document.getElementById('ket').value || '(Keterangan)';
+      const tglSurat = getIndonesianMonthYear(rawDate);
+      const jenisIzin = document.getElementById('jenis_izin').value;
+      const alasan = document.getElementById('ket').value || '…………………………………………………..';
       
-      const template = `Assallamu'allaikum warohmatullahi Wabarokatuh.
-memohon ijin ,pada : 
-Nama= ${nama}
-Hari/tgl= ${hariTgl}
-Waktu = ${waktu}
-Ket. = ${ket}
-Demikian informasi disampaikan , mohon maaf .
-Atas perhatian serta kerjasama yg baik dan kondusifitas kegiatan pada hari ini, disampaikan terima kasih.
-Wasallam warohmatullahi Wabarokaatuh.
+      const template = `SURAT IZIN
 
-Ttd
+Kepada : Yth. Bp. Drs. Guruh Sarang Murtiyoso, S.Pd., M.M.
+Kepala SMK Gajah Mungkur 1 Wuryantoro
+di Tempat
+
+Dengan hormat,
+Saya yang bertanda tangan di bawah ini:
+Nama : ${nama}
+Kedudukan : ${selectedKedudukan}
+
+Dengan ini mengajukan izin ${jenisIzin} pada:
+Hari, tanggal : ${hariTgl}
+Alasan : ${alasan}
+
+Sehubungan dengan hal tersebut, saya mohon izin untuk tidak melaksanakan tugas pada hari tersebut. Demikian surat izin ini kami sampaikan, atas perhatian dan pemberian izinnya kami mengucapkan terima kasih.
+
+
+Wuryantoro, ${tglSurat}
+Yang mengajukan izin
+
+
+
 ${nama}`;
       
       document.getElementById('previewText').innerText = template;
@@ -247,37 +324,59 @@ ${nama}`;
     }
 
     fields.forEach(id => {
-      document.getElementById(id).addEventListener('input', updatePreview);
+      document.getElementById(id).addEventListener('input', () => {
+        updatePreview();
+        validateForm();
+      });
     });
+    document.getElementById('jenis_izin').addEventListener('change', () => {
+      updatePreview();
+      validateForm();
+    });
+
+    function getFileData(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
 
     async function prosesIzin() {
       const btn = document.getElementById('btnKirim');
       const statusDiv = document.getElementById('statusMessage');
       const namaValue = document.getElementById('nama').value;
       const rawDate = document.getElementById('hari_tgl').value;
-
-      if (!namaValue) {
-        alert('Silakan pilih Nama terlebih dahulu!');
-        return;
-      }
-      if (!rawDate) {
-        alert('Silakan pilih Tanggal terlebih dahulu!');
-        return;
-      }
-
-      const formattedDate = formatIndonesianDate(rawDate);
-
-      const payload = {
-        nama: namaValue,
-        hari_tgl: formattedDate,
-        waktu: document.getElementById('waktu').value,
-        ket: document.getElementById('ket').value,
-        ttd: namaValue
-      };
+      const alasanValue = document.getElementById('ket').value.trim();
+      const fileInput = document.getElementById('bukti_foto');
 
       btn.disabled = true;
       statusDiv.className = "status-msg loading";
-      statusDiv.innerText = "Sedang menyimpan ke Spreadsheet...";
+      statusDiv.innerText = "Sedang mengunggah & menyimpan data...";
+
+      const formattedDate = formatIndonesianDate(rawDate);
+      const payload = {
+        nama: namaValue,
+        kedudukan: selectedKedudukan,
+        jenis_izin: document.getElementById('jenis_izin').value,
+        hari_tgl: formattedDate,
+        alasan: alasanValue
+      };
+
+      const file = fileInput.files[0];
+      try {
+        const base64Data = await getFileData(file);
+        payload.fileData = base64Data;
+        payload.fileName = file.name;
+        payload.fileType = file.type;
+      } catch (err) {
+        console.error("Gagal membaca file: ", err);
+        statusDiv.className = "status-msg error";
+        statusDiv.innerText = "Gagal memproses file.";
+        btn.disabled = false;
+        return;
+      }
 
       try {
         await fetch(apiUrl, {
@@ -309,7 +408,6 @@ ${nama}`;
       }
     }
 
-    // Panggil daftar nama saat halaman selesai loading
     window.onload = () => {
       loadDaftarNama();
       updatePreview();
