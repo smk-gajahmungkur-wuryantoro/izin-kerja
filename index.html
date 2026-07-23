@@ -114,25 +114,39 @@
       line-height: 1.5;
       text-align: left;
     }
+    .btn-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
+    }
     .btn-kirim {
       display: flex;
       justify-content: center;
       align-items: center;
       width: 100%;
       height: 48px;
-      background-color: #25D366;
       color: #ffffff;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       border: none;
       border-radius: 10px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
       transition: all 0.2s ease;
-      margin-top: 10px;
     }
-    .btn-kirim:hover {
+    .btn-primary {
+      background-color: #25D366;
+      box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+    }
+    .btn-primary:hover {
       background-color: #20ba5a;
+    }
+    .btn-secondary {
+      background-color: #0b57d0;
+      box-shadow: 0 4px 12px rgba(11, 87, 208, 0.2);
+    }
+    .btn-secondary:hover {
+      background-color: #0a4ebd;
     }
     .btn-kirim:active {
       transform: scale(0.98);
@@ -205,17 +219,29 @@
       <div id="previewText" class="preview-box"></div>
     </div>
 
-    <button id="btnKirim" class="btn-kirim" onclick="prosesIzin()" disabled>Simpan & Kirim ke WhatsApp</button>
+    <div class="btn-container">
+      <!-- Tombol Pertama: Hijau (Simpan & Kirim ke Kepala Sekolah) -->
+      <button id="btnKirim1" class="btn-kirim btn-primary" onclick="prosesIzin(1)" disabled>Simpan & Kirim ke Kepala Sekolah</button>
+      
+      <!-- Tombol Kedua: Biru (Simpan & Kirim ke Kurikulum) -->
+      <button id="btnKirim2" class="btn-kirim btn-secondary" onclick="prosesIzin(2)" disabled>Simpan & Kirim ke Kurikulum</button>
+    </div>
+
     <div id="statusMessage" class="status-msg"></div>
   </div>
 
   <script>
     const fields = ['nama', 'hari_tgl', 'jenis_izin', 'ket'];
-    const targetPhone = '6282322575527';
+    
+    // DEFINISI DUA NOMOR TUJUAN WA
+    const phoneTujuan1 = '6282322575527'; // Kepala Sekolah
+    const phoneTujuan2 = '6285172312046'; // Kurikulum
+
     const apiUrl = 'https://script.google.com/macros/s/AKfycbxRutqld0iFXEFQ1UJiZhrXEEa_VY5hl9vLIT3W4GR1rzpajEZEPbuqN172VdEmZ0Q83A/exec';
     
     let dbGuru = [];
     let selectedKedudukan = 'Guru';
+    let dataSaved = false;
 
     async function loadDaftarNama() {
       const selectNama = document.getElementById('nama');
@@ -241,6 +267,7 @@
       validateForm();
     }
 
+    // Fungsi trigger ketika nama diubah
     function onNamaChange() {
       const selectNama = document.getElementById('nama');
       const selectedNama = selectNama.value;
@@ -252,17 +279,23 @@
       validateForm();
     }
 
+    // Fungsi validasi tombol agar aktif hanya jika semua terisi
     function validateForm() {
       const namaValue = document.getElementById('nama').value;
       const rawDate = document.getElementById('hari_tgl').value;
       const alasanValue = document.getElementById('ket').value.trim();
       const fileInput = document.getElementById('bukti_foto');
-      const btn = document.getElementById('btnKirim');
+      
+      const btn1 = document.getElementById('btnKirim1');
+      const btn2 = document.getElementById('btnKirim2');
 
       const isComplete = namaValue && rawDate && alasanValue && fileInput.files.length > 0;
-      btn.disabled = !isComplete;
+      
+      btn1.disabled = !isComplete;
+      btn2.disabled = !isComplete;
     }
 
+    // Memformat input YYYY-MM-DD ke format Hari, DD/MM/YY
     function formatIndonesianDate(dateString) {
       if (!dateString) return '……………………………………………';
       const date = new Date(dateString);
@@ -276,6 +309,7 @@
       return `${dayName}, ${dd}/${mm}/${yy}`;
     }
 
+    // Memformat tanggal surat ke teks Indonesia
     function getIndonesianMonthYear(dateString) {
       if (!dateString) return '…………………… 2025';
       const date = new Date(dateString);
@@ -286,6 +320,7 @@
       return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
     }
 
+    // Melakukan render pratinjau surat izin
     function updatePreview() {
       const nama = document.getElementById('nama').value || '…………………………….';
       const rawDate = document.getElementById('hari_tgl').value;
@@ -327,11 +362,13 @@ ${nama}`;
       document.getElementById(id).addEventListener('input', () => {
         updatePreview();
         validateForm();
+        dataSaved = false;
       });
     });
     document.getElementById('jenis_izin').addEventListener('change', () => {
       updatePreview();
       validateForm();
+      dataSaved = false;
     });
 
     function getFileData(file) {
@@ -343,69 +380,77 @@ ${nama}`;
       });
     }
 
-    async function prosesIzin() {
-      const btn = document.getElementById('btnKirim');
+    async function prosesIzin(targetNum) {
+      const btn1 = document.getElementById('btnKirim1');
+      const btn2 = document.getElementById('btnKirim2');
       const statusDiv = document.getElementById('statusMessage');
-      const namaValue = document.getElementById('nama').value;
-      const rawDate = document.getElementById('hari_tgl').value;
-      const alasanValue = document.getElementById('ket').value.trim();
-      const fileInput = document.getElementById('bukti_foto');
+      const targetPhone = targetNum === 1 ? phoneTujuan1 : phoneTujuan2;
 
-      btn.disabled = true;
-      statusDiv.className = "status-msg loading";
-      statusDiv.innerText = "Sedang mengunggah & menyimpan data...";
+      const labelTarget = targetNum === 1 ? "Kepala Sekolah" : "Kurikulum";
 
-      const formattedDate = formatIndonesianDate(rawDate);
-      const payload = {
-        nama: namaValue,
-        kedudukan: selectedKedudukan,
-        jenis_izin: document.getElementById('jenis_izin').value,
-        hari_tgl: formattedDate,
-        alasan: alasanValue
-      };
+      if (!dataSaved) {
+        btn1.disabled = true;
+        btn2.disabled = true;
+        statusDiv.className = "status-msg loading";
+        statusDiv.innerText = "Sedang mengunggah & menyimpan data...";
 
-      const file = fileInput.files[0];
-      try {
-        const base64Data = await getFileData(file);
-        payload.fileData = base64Data;
-        payload.fileName = file.name;
-        payload.fileType = file.type;
-      } catch (err) {
-        console.error("Gagal membaca file: ", err);
-        statusDiv.className = "status-msg error";
-        statusDiv.innerText = "Gagal memproses file.";
-        btn.disabled = false;
-        return;
-      }
-
-      try {
-        await fetch(apiUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        statusDiv.className = "status-msg success";
-        statusDiv.innerText = "Berhasil disimpan! Mengalihkan ke WhatsApp...";
+        const namaValue = document.getElementById('nama').value;
+        const rawDate = document.getElementById('hari_tgl').value;
+        const formattedDate = formatIndonesianDate(rawDate);
         
-        setTimeout(() => {
-          const text = updatePreview();
-          const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
-          window.open(url, '_blank');
-          btn.disabled = false;
-          statusDiv.innerText = "";
-          statusDiv.className = "status-msg";
-        }, 1500);
+        const payload = {
+          nama: namaValue,
+          kedudukan: selectedKedudukan,
+          jenis_izin: document.getElementById('jenis_izin').value,
+          hari_tgl: formattedDate,
+          alasan: document.getElementById('ket').value.trim()
+        };
 
-      } catch (error) {
-        console.error(error);
-        statusDiv.className = "status-msg error";
-        statusDiv.innerText = "Gagal memproses data. Hubungi admin.";
-        btn.disabled = false;
+        const fileInput = document.getElementById('bukti_foto');
+        const file = fileInput.files[0];
+        try {
+          const base64Data = await getFileData(file);
+          payload.fileData = base64Data;
+          payload.fileName = file.name;
+          payload.fileType = file.type;
+        } catch (err) {
+          console.error("Gagal membaca file: ", err);
+          statusDiv.className = "status-msg error";
+          statusDiv.innerText = "Gagal memproses file.";
+          validateForm();
+          return;
+        }
+
+        try {
+          await fetch(apiUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+          dataSaved = true;
+        } catch (error) {
+          console.error(error);
+          statusDiv.className = "status-msg error";
+          statusDiv.innerText = "Gagal menyimpan data ke Spreadsheet.";
+          validateForm();
+          return;
+        }
       }
+
+      statusDiv.className = "status-msg success";
+      statusDiv.innerText = `Mengalihkan ke WhatsApp ${labelTarget}...`;
+      
+      setTimeout(() => {
+        const text = updatePreview();
+        const url = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+        statusDiv.innerText = "";
+        statusDiv.className = "status-msg";
+        validateForm();
+      }, 1000);
     }
 
     window.onload = () => {
