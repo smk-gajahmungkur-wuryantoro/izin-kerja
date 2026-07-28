@@ -379,12 +379,20 @@ ${nama}`;
       }
 
       try {
-        // MENGEMBALIKAN KE METODE FETCH JSON ASLI & AMAN
+        // Mengubah format ke URLSearchParams untuk memicu Content-Type: application/x-www-form-urlencoded
+        const searchParams = new URLSearchParams();
+        for (const key in payload) {
+          searchParams.append(key, payload[key]);
+        }
+
+        // Jalankan fetch dengan mode no-cors murni tanpa custom headers agar tidak diblokir CORS browser
         await fetch(apiUrl, {
           method: 'POST',
-          body: JSON.stringify(payload)
+          mode: 'no-cors',
+          body: searchParams
         });
 
+        // Karena mode: 'no-cors', kita anggap pemrosesan selalu sukses 
         statusDiv.className = "status-msg success";
         statusDiv.innerText = "Berhasil disimpan! Mengalihkan ke WhatsApp...";
         
