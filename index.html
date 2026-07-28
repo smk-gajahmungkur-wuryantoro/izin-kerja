@@ -276,6 +276,7 @@
       return `${dayName}, ${dd}/${mm}/${yy}`;
     }
 
+    // Memformat tanggal surat ke teks Indonesia
     function getIndonesianMonthYear(dateString) {
       if (!dateString) return '…………………… 2025';
       const date = new Date(dateString);
@@ -379,10 +380,24 @@ ${nama}`;
       }
 
       try {
-        // Hilangkan opsi mode: 'no-cors' agar payload JSON dikirim secara utuh dengan header aslinya ke Google API
+        // Menggunakan mode 'no-cors' agar browser mengabaikan CORS error,
+        // namun kita kirim data dengan format urlencoded standard agar terbaca
+        // sebagai parameter di Google Apps Script backend.
+        const formBody = [];
+        for (const property in payload) {
+          const encodedKey = encodeURIComponent(property);
+          const encodedValue = encodeURIComponent(payload[property]);
+          formBody.push(encodedKey + "=" + encodedValue);
+        }
+        const encodedData = formBody.join("&");
+
         await fetch(apiUrl, {
           method: 'POST',
-          body: JSON.stringify(payload)
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: encodedData
         });
 
         statusDiv.className = "status-msg success";
