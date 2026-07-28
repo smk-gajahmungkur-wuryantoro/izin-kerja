@@ -211,10 +211,7 @@
 
   <script>
     const fields = ['nama', 'hari_tgl', 'jenis_izin', 'ket'];
-    
-    // DEFINISI SATU NOMOR TUJUAN WA (KEPALA SEKOLAH)
-    const targetPhone = '6281548561354';
-
+    const targetPhone = '6282322575527';
     const apiUrl = 'https://script.google.com/macros/s/AKfycbxRutqld0iFXEFQ1UJiZhrXEEa_VY5hl9vLIT3W4GR1rzpajEZEPbuqN172VdEmZ0Q83A/exec';
     
     let dbGuru = [];
@@ -247,10 +244,15 @@
     function onNamaChange() {
       const selectNama = document.getElementById('nama');
       const selectedNama = selectNama.value;
+      
+      // Ambil kedudukan yang benar dari database Guru berdasarkan nama teks yang dipilih
       const found = dbGuru.find(g => g.nama === selectedNama);
       if (found) {
         selectedKedudukan = found.kedudukan;
+      } else {
+        selectedKedudukan = 'Guru';
       }
+      
       updatePreview();
       validateForm();
     }
