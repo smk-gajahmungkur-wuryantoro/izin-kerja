@@ -276,7 +276,6 @@
       return `${dayName}, ${dd}/${mm}/${yy}`;
     }
 
-    // Memformat tanggal surat ke teks Indonesia
     function getIndonesianMonthYear(dateString) {
       if (!dateString) return '…………………… 2025';
       const date = new Date(dateString);
@@ -380,9 +379,6 @@ ${nama}`;
       }
 
       try {
-        // Menggunakan mode 'no-cors' agar browser mengabaikan CORS error,
-        // namun kita kirim data dengan format urlencoded standard agar terbaca
-        // sebagai parameter di Google Apps Script backend.
         const formBody = [];
         for (const property in payload) {
           const encodedKey = encodeURIComponent(property);
@@ -394,9 +390,6 @@ ${nama}`;
         await fetch(apiUrl, {
           method: 'POST',
           mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
           body: encodedData
         });
 
