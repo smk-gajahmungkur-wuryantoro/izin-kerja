@@ -379,18 +379,10 @@ ${nama}`;
       }
 
       try {
-        const formBody = [];
-        for (const property in payload) {
-          const encodedKey = encodeURIComponent(property);
-          const encodedValue = encodeURIComponent(payload[property]);
-          formBody.push(encodedKey + "=" + encodedValue);
-        }
-        const encodedData = formBody.join("&");
-
+        // MENGEMBALIKAN KE METODE FETCH JSON ASLI & AMAN
         await fetch(apiUrl, {
           method: 'POST',
-          mode: 'no-cors',
-          body: encodedData
+          body: JSON.stringify(payload)
         });
 
         statusDiv.className = "status-msg success";
