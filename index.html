@@ -244,15 +244,10 @@
     function onNamaChange() {
       const selectNama = document.getElementById('nama');
       const selectedNama = selectNama.value;
-      
-      // Ambil kedudukan yang benar dari database Guru berdasarkan nama teks yang dipilih
       const found = dbGuru.find(g => g.nama === selectedNama);
       if (found) {
         selectedKedudukan = found.kedudukan;
-      } else {
-        selectedKedudukan = 'Guru';
       }
-      
       updatePreview();
       validateForm();
     }
@@ -384,12 +379,11 @@ ${nama}`;
       }
 
       try {
+        // Menggunakan mode default (CORS) dengan format data URL Encoded agar 
+        // Google Apps Script tidak memblokir tipe datanya di browser.
         await fetch(apiUrl, {
           method: 'POST',
           mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/json'
-          },
           body: JSON.stringify(payload)
         });
 
